@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Moxie Dashboard</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f5f5f5;
+      color: #111;
+      min-height: 100vh;
+    }
+
+    /* ── Header ── */
+    header {
+      background: #fff;
+      border-bottom: 1px solid #e5e5e5;
+      padding: 16px 32px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .logo {
+      width: 36px; height: 36px;
+      background: #411941;
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      color: #fff; font-weight: 800; font-size: 16px;
+      letter-spacing: -1px; flex-shrink: 0;
+    }
+    header h1 { font-size: 20px; font-weight: 600; color: #411941; flex: 1; }
+
+    .header-actions { display: flex; gap: 8px; }
+
+    .btn {
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      border: none;
+      transition: all 0.15s;
+    }
+    .btn-primary { background: #411941; color: #fff; }
+    .btn-primary:hover { background: #5a2a5a; }
+    .btn-outline { background: #fff; color: #411941; border: 1.5px solid #411941; }
+    .btn-outline:hover { background: #f9f0f9; }
+    .btn-danger { background: #fff; color: #d32f2f; border: 1.5px solid #d32f2f; }
+    .btn-danger:hover { background: #fdf2f2; }
+
+    /* ── Main ── */
+    main { max-width: 1200px; margin: 0 auto; padding: 32px 32px 64px; }
+
+    /* ── Section ── */
+    section { margin-bottom: 40px; }
+
+    .section-header {
+      display: flex; align-items: center; gap: 8px;
+      margin-bottom: 16px; padding-bottom: 12px;
+      border-bottom: 1px solid #e5e5e5;
+    }
+    .section-header h2 { font-size: 16px; font-weight: 600; color: #333; flex: 1; }
+    .section-icon { font-size: 18px; }
+
+    /* edit-mode section controls */
+    .section-edit-controls { display: none; gap: 6px; }
+    body.edit-mode .section-edit-controls { display: flex; }
+
+    .btn-sm {
+      padding: 4px 10px; border-radius: 6px;
+      font-size: 12px; font-weight: 500;
+      cursor: pointer; border: none; transition: all 0.15s;
+    }
+    .btn-sm-outline { background: #fff; color: #411941; border: 1.5px solid #411941; }
+    .btn-sm-outline:hover { background: #f9f0f9; }
+    .btn-sm-red { background: #fff; color: #c62828; border: 1.5px solid #c62828; }
+    .btn-sm-red:hover { background: #fdf2f2; }
+
+    /* ── Grid ── */
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; }
+
+    /* ── Card ── */
+    .card-wrap { position: relative; }
+
+    body.edit-mode .card-wrap { cursor: grab; }
+    body.edit-mode .card-wrap:active { cursor: grabbing; }
+    body.edit-mode .card-wrap.drag-over .card { border: 2px dashed #411941; }
+    body.edit-mode .card-wrap.dragging { opacity: 0.4; }
+
+    .card {
+      background: #fff;
+      border: 1px solid #e8e8e8;
+      border-radius: 12px;
+      padding: 20px 12px 16px;
+      display: flex; flex-direction: column;
+      align-items: center; gap: 10px;
+      text-decoration: none; color: #222;
+      transition: box-shadow 0.15s, transform 0.15s;
+      width: 100%;
+    }
+    .card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.10); transform: translateY(-2px); }
+    body.edit-mode .card:hover { transform: none; box-shadow: none; }
+
+    .card img { width: 48px; height: 48px; border-radius: 10px; object-fit: contain; }
+    .card span { font-size: 13px; font-weight: 500; text-align: center; color: #333; }
+
+    /* delete button */
+    .card-delete {
+      display: none;
+      position: absolute; top: -8px; right: -8px;
+      width: 22px; height: 22px;
+      background: #c62828; color: #fff;
+      border-radius: 50%; border: none;
+      font-size: 14px; line-height: 22px; text-align: center;
+      cursor: pointer; z-index: 5;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+    }
+    body.edit-mode .card-delete { display: block; }
+
+    /* edit mode shimmer on cards */
+    body.edit-mode .card {
+      border: 1.5px dashed #ccc;
+    }
+
+    /* ── Add App placeholder ── */
+    .add-app-card {
+      display: none;
+      background: #faf5fa;
+      border: 2px dashed #c9a8c9;
+      border-radius: 12px;
+      padding: 20px 12px 16px;
+      flex-direction: column;
+      align-items: center; gap: 10px;
+      cursor: pointer;
+      color: #411941;
+      font-size: 13px; font-weight: 500;
+      transition: background 0.15s;
+      min-height: 110px;
+      justify-content: center;
+    }
+    .add-app-card:hover { background: #f3e8f3; }
+    .add-app-card .plus { font-size: 28px; font-weight: 300; line-height: 1; color: #411941; }
+    body.edit-mode .add-app-card { display: flex; }
+
+    /* ── Edit mode banner ── */
+    .edit-banner {
+      display: none;
+      background: #411941;
+      color: #fff;
+      font-size: 13px;
+      font-weight: 500;
+      text-align: center;
+      padding: 8px;
+      letter-spacing: 0.3px;
+    }
+    body.edit-mode .edit-banner { display: block; }
+
+    /* ── Modal ── */
+    .modal-overlay {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.45);
+      z-index: 200;
+      align-items: center; justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+
+    .modal {
+      background: #fff;
+      border-radius: 16px;
+      padding: 32px;
+      width: 440px;
+      max-width: 95vw;
+      box-shadow: 0 8px 40px rgba(0,0,0,0.18);
+    }
+    .modal h3 { font-size: 18px; font-weight: 600; color: #411941; margin-bottom: 20px; }
+
+    .form-group { margin-bottom: 16px; }
+    .form-group label { display: block; font-size: 12px; font-weight: 600; color: #555; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .form-group input, .form-group select {
+      width: 100%; padding: 10px 12px;
+      border: 1.5px solid #ddd; border-radius: 8px;
+      font-size: 14px; color: #111;
+      transition: border 0.15s;
+    }
+    .form-group input:focus, .form-group select:focus {
+      outline: none; border-color: #411941;
+    }
+
+    .logo-preview {
+      display: flex; align-items: center; gap: 12px;
+      margin-top: 8px;
+    }
+    .logo-preview img {
+      width: 40px; height: 40px;
+      border-radius: 8px; object-fit: contain;
+      border: 1px solid #eee;
+    }
+    .logo-preview span { font-size: 12px; color: #888; }
+
+    .modal-actions { display: flex; gap: 10px; margin-top: 24px; justify-content: flex-end; }
+
+    /* section rename input */
+    .section-name-input {
+      font-size: 16px; font-weight: 600; color: #333;
+      border: none; border-bottom: 1.5px solid #411941;
+      background: transparent; padding: 0 2px;
+      width: 160px;
+    }
+    .section-name-input:focus { outline: none; }
+  </style>
+</head>
+<body>
+
+  <div class="edit-banner">✏️ Customize Mode — drag to reorder, click + to add apps, × to remove</div>
+
+  <header>
+    <div class="logo">M.</div>
+    <h1>Moxie Dashboard</h1>
+    <div class="header-actions">
+      <button class="btn btn-outline" id="customizeBtn" onclick="toggleEditMode()">✏️ Customize</button>
+      <button class="btn btn-primary" id="doneBtn" style="display:none" onclick="toggleEditMode()">✓ Done</button>
+    </div>
+  </header>
+
+  <main id="main"></main>
+
+  <!-- Add App Modal -->
+  <div class="modal-overlay" id="addModal">
+    <div class="modal">
+      <h3>Add App</h3>
+
+      <div class="form-group">
+        <label>App Name</label>
+        <input type="text" id="appName" placeholder="e.g. Figma" oninput="updateLogoPreview()">
+      </div>
+
+      <div class="form-group">
+        <label>URL</label>
+        <input type="url" id="appUrl" placeholder="https://figma.com" oninput="updateLogoPreview()">
+      </div>
+
+      <div class="form-group">
+        <label>Logo (auto-detected from URL)</label>
+        <div class="logo-preview">
+          <img id="logoPreviewImg" src="" alt="" style="display:none">
+          <span id="logoPreviewText">Enter a URL to preview logo</span>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Section</label>
+        <select id="appSection"></select>
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="addApp()">Add App</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+// ── Default data ──────────────────────────────────────────────
+const DEFAULT = {
+  sections: [
+    {
+      id: "communication", name: "Communication", icon: "📡",
+      apps: [
+        { id: "gmail",    name: "Gmail",           url: "https://mail.google.com",            logo: "https://www.gstatic.com/images/branding/product/2x/gmail_2020q4_48dp.png" },
+        { id: "meet",     name: "Google Meet",     url: "https://meet.google.com",            logo: "https://www.gstatic.com/images/branding/product/2x/meet_2020q4_48dp.png" },
+        { id: "slack",    name: "Slack",           url: "https://slack.com",                  logo: "https://a.slack-edge.com/80588/marketing/img/meta/slack_hash_256.png" },
+        { id: "loom",     name: "Loom",            url: "https://loom.com",                   logo: "https://www.google.com/s2/favicons?domain=loom.com&sz=128" },
+        { id: "fathom",   name: "Fathom",          url: "https://fathom.video",               logo: "https://www.google.com/s2/favicons?domain=fathom.video&sz=128" },
+        { id: "gcal",     name: "Google Calendar", url: "https://calendar.google.com",        logo: "https://www.gstatic.com/images/branding/product/2x/calendar_2020q4_48dp.png" },
+        { id: "intercom", name: "Intercom",        url: "https://app.intercom.com",           logo: "https://www.google.com/s2/favicons?domain=intercom.com&sz=128" },
+      ]
+    },
+    {
+      id: "project", name: "Project Management", icon: "🗂️",
+      apps: [
+        { id: "notion",   name: "Notion",          url: "https://notion.so",                  logo: "https://www.google.com/s2/favicons?domain=notion.so&sz=128" },
+        { id: "arrows",   name: "Arrows",          url: "https://arrows.to",                  logo: "https://www.google.com/s2/favicons?domain=arrows.to&sz=128" },
+        { id: "asana",    name: "Asana",           url: "https://asana.com",                  logo: "https://www.google.com/s2/favicons?domain=asana.com&sz=128" },
+        { id: "gcal2",    name: "Google Calendar", url: "https://calendar.google.com",        logo: "https://www.gstatic.com/images/branding/product/2x/calendar_2020q4_48dp.png" },
+        { id: "sheets",   name: "Google Sheets",   url: "https://docs.google.com/spreadsheets",logo: "https://www.gstatic.com/images/branding/product/2x/sheets_2020q4_48dp.png" },
+        { id: "clickup",  name: "ClickUp",         url: "https://clickup.com",                logo: "https://www.google.com/s2/favicons?domain=clickup.com&sz=128" },
+      ]
+    },
+    {
+      id: "finance", name: "Finance", icon: "💰",
+      apps: [
+        { id: "ramp",     name: "Ramp",            url: "https://ramp.com",                   logo: "https://www.google.com/s2/favicons?domain=ramp.com&sz=128" },
+        { id: "stripe",   name: "Stripe",          url: "https://stripe.com",                 logo: "https://www.google.com/s2/favicons?domain=stripe.com&sz=128" },
+        { id: "justworks",name: "JustWorks",       url: "https://justworks.com",              logo: "https://www.google.com/s2/favicons?domain=justworks.com&sz=128" },
+      ]
+    },
+    {
+      id: "sales", name: "Sales & CRM", icon: "🛒",
+      apps: [
+        { id: "hubspot",   name: "HubSpot",   url: "https://hubspot.com",          logo: "https://www.google.com/s2/favicons?domain=hubspot.com&sz=128" },
+        { id: "shopify",   name: "Shopify",   url: "https://shopify.com",          logo: "https://www.google.com/s2/favicons?domain=shopify.com&sz=128" },
+      ]
+    },
+    {
+      id: "operations", name: "Operations", icon: "⚙️",
+      apps: [
+        { id: "gdrive",   name: "Google Drive",    url: "https://drive.google.com",           logo: "https://www.gstatic.com/images/branding/product/2x/drive_2020q4_48dp.png" },
+        { id: "zapier",   name: "Zapier",          url: "https://zapier.com",                 logo: "https://www.google.com/s2/favicons?domain=zapier.com&sz=128" },
+      ]
+    }
+  ]
+};
+
+// ── State ─────────────────────────────────────────────────────
+let data = loadData();
+let editMode = false;
+let targetSectionId = null; // which section triggered "Add App"
+let dragSrc = null;         // { sectionId, appId }
+
+function loadData() {
+  try {
+    const saved = localStorage.getItem("moxie-dashboard");
+    return saved ? JSON.parse(saved) : JSON.parse(JSON.stringify(DEFAULT));
+  } catch(e) { return JSON.parse(JSON.stringify(DEFAULT)); }
+}
+
+function saveData() {
+  localStorage.setItem("moxie-dashboard", JSON.stringify(data));
+}
+
+// ── Render ────────────────────────────────────────────────────
+function render() {
+  const main = document.getElementById("main");
+  main.innerHTML = "";
+
+  data.sections.forEach(section => {
+    const sec = document.createElement("section");
+    sec.dataset.sectionId = section.id;
+
+    // Section header
+    const hdr = document.createElement("div");
+    hdr.className = "section-header";
+    hdr.innerHTML = `
+      <span class="section-icon">${section.icon}</span>
+      <h2 class="section-title" data-sid="${section.id}">${section.name}</h2>
+      <div class="section-edit-controls">
+        <button class="btn-sm btn-sm-outline" onclick="renameSectionPrompt('${section.id}')">✏️ Rename</button>
+        <button class="btn-sm btn-sm-red" onclick="deleteSection('${section.id}')">✕ Remove Section</button>
+      </div>
+    `;
+    sec.appendChild(hdr);
+
+    // Grid
+    const grid = document.createElement("div");
+    grid.className = "grid";
+    grid.dataset.sectionId = section.id;
+
+    section.apps.forEach(app => {
+      grid.appendChild(makeCard(app, section.id));
+    });
+
+    // Add App card
+    const addCard = document.createElement("div");
+    addCard.className = "add-app-card";
+    addCard.onclick = () => openModal(section.id);
+    addCard.innerHTML = `<span class="plus">+</span><span>Add App</span>`;
+    grid.appendChild(addCard);
+
+    sec.appendChild(grid);
+    main.appendChild(sec);
+  });
+
+  // Add Section button (only in edit mode)
+  if (editMode) {
+    const addSec = document.createElement("button");
+    addSec.className = "btn btn-outline";
+    addSec.style.marginTop = "8px";
+    addSec.textContent = "+ Add Section";
+    addSec.onclick = addSection;
+    main.appendChild(addSec);
+  }
+
+  // Re-bind drag events
+  if (editMode) bindDrag();
+}
+
+function makeCard(app, sectionId) {
+  const wrap = document.createElement("div");
+  wrap.className = "card-wrap";
+  wrap.draggable = editMode;
+  wrap.dataset.appId = app.id;
+  wrap.dataset.sectionId = sectionId;
+
+  const del = document.createElement("button");
+  del.className = "card-delete";
+  del.title = "Remove";
+  del.textContent = "×";
+  del.onclick = (e) => { e.preventDefault(); deleteApp(sectionId, app.id); };
+
+  const a = document.createElement("a");
+  a.className = "card";
+  a.href = editMode ? "#" : app.url;
+  a.target = editMode ? "_self" : "_blank";
+  a.onclick = editMode ? (e) => e.preventDefault() : null;
+
+  const img = document.createElement("img");
+  img.src = app.logo;
+  img.alt = app.name;
+  img.onerror = function() { this.src = `https://www.google.com/s2/favicons?domain=${new URL(app.url).hostname}&sz=128`; };
+
+  const name = document.createElement("span");
+  name.textContent = app.name;
+
+  a.appendChild(img);
+  a.appendChild(name);
+  wrap.appendChild(del);
+  wrap.appendChild(a);
+  return wrap;
+}
+
+// ── Edit Mode ─────────────────────────────────────────────────
+function toggleEditMode() {
+  editMode = !editMode;
+  document.body.classList.toggle("edit-mode", editMode);
+  document.getElementById("customizeBtn").style.display = editMode ? "none" : "";
+  document.getElementById("doneBtn").style.display = editMode ? "" : "none";
+  render();
+}
+
+// ── Delete ────────────────────────────────────────────────────
+function deleteApp(sectionId, appId) {
+  const sec = data.sections.find(s => s.id === sectionId);
+  if (!sec) return;
+  sec.apps = sec.apps.filter(a => a.id !== appId);
+  saveData(); render();
+}
+
+function deleteSection(sectionId) {
+  if (!confirm("Remove this entire section?")) return;
+  data.sections = data.sections.filter(s => s.id !== sectionId);
+  saveData(); render();
+}
+
+// ── Rename Section ────────────────────────────────────────────
+function renameSectionPrompt(sectionId) {
+  const sec = data.sections.find(s => s.id === sectionId);
+  if (!sec) return;
+  const name = prompt("Rename section:", sec.name);
+  if (name && name.trim()) {
+    sec.name = name.trim();
+    saveData(); render();
+  }
+}
+
+// ── Add Section ───────────────────────────────────────────────
+function addSection() {
+  const name = prompt("New section name:");
+  if (!name || !name.trim()) return;
+  const id = "sec_" + Date.now();
+  data.sections.push({ id, name: name.trim(), icon: "📌", apps: [] });
+  saveData(); render();
+}
+
+// ── Modal ─────────────────────────────────────────────────────
+function openModal(sectionId) {
+  targetSectionId = sectionId;
+  document.getElementById("appName").value = "";
+  document.getElementById("appUrl").value = "";
+  document.getElementById("logoPreviewImg").style.display = "none";
+  document.getElementById("logoPreviewText").textContent = "Enter a URL to preview logo";
+
+  // Populate section dropdown
+  const sel = document.getElementById("appSection");
+  sel.innerHTML = data.sections.map(s =>
+    `<option value="${s.id}" ${s.id === sectionId ? "selected" : ""}>${s.name}</option>`
+  ).join("");
+
+  document.getElementById("addModal").classList.add("open");
+  setTimeout(() => document.getElementById("appName").focus(), 50);
+}
+
+function closeModal() {
+  document.getElementById("addModal").classList.remove("open");
+}
+
+document.getElementById("addModal").addEventListener("click", function(e) {
+  if (e.target === this) closeModal();
+});
+
+function updateLogoPreview() {
+  const url = document.getElementById("appUrl").value.trim();
+  const img = document.getElementById("logoPreviewImg");
+  const txt = document.getElementById("logoPreviewText");
+  if (!url) { img.style.display = "none"; txt.textContent = "Enter a URL to preview logo"; return; }
+  try {
+    const hostname = new URL(url.startsWith("http") ? url : "https://" + url).hostname;
+    const src = `https://www.google.com/s2/favicons?domain=${hostname}&sz=128`;
+    img.src = src;
+    img.style.display = "block";
+    txt.textContent = "Logo auto-fetched from " + hostname;
+  } catch(e) {
+    img.style.display = "none";
+    txt.textContent = "Invalid URL";
+  }
+}
+
+function addApp() {
+  const name = document.getElementById("appName").value.trim();
+  let url = document.getElementById("appUrl").value.trim();
+  const sectionId = document.getElementById("appSection").value;
+
+  if (!name || !url) { alert("Please fill in App Name and URL."); return; }
+  if (!url.startsWith("http")) url = "https://" + url;
+
+  let hostname;
+  try { hostname = new URL(url).hostname; } catch(e) { alert("Invalid URL."); return; }
+
+  const logo = `https://www.google.com/s2/favicons?domain=${hostname}&sz=128`;
+  const id = "app_" + Date.now();
+
+  const sec = data.sections.find(s => s.id === sectionId);
+  if (sec) { sec.apps.push({ id, name, url, logo }); }
+
+  saveData();
+  closeModal();
+  render();
+}
+
+// ── Drag & Drop ───────────────────────────────────────────────
+function bindDrag() {
+  document.querySelectorAll(".card-wrap[draggable='true']").forEach(el => {
+    el.addEventListener("dragstart", onDragStart);
+    el.addEventListener("dragover",  onDragOver);
+    el.addEventListener("dragleave", onDragLeave);
+    el.addEventListener("drop",      onDrop);
+    el.addEventListener("dragend",   onDragEnd);
+  });
+}
+
+function onDragStart(e) {
+  dragSrc = { sectionId: this.dataset.sectionId, appId: this.dataset.appId };
+  this.classList.add("dragging");
+  e.dataTransfer.effectAllowed = "move";
+}
+function onDragOver(e) { e.preventDefault(); this.classList.add("drag-over"); }
+function onDragLeave() { this.classList.remove("drag-over"); }
+function onDragEnd() { document.querySelectorAll(".card-wrap").forEach(el => el.classList.remove("dragging","drag-over")); }
+
+function onDrop(e) {
+  e.preventDefault();
+  this.classList.remove("drag-over");
+  if (!dragSrc) return;
+
+  const toSectionId = this.dataset.sectionId;
+  const toAppId = this.dataset.appId;
+  if (dragSrc.appId === toAppId) return;
+
+  const fromSec = data.sections.find(s => s.id === dragSrc.sectionId);
+  const toSec   = data.sections.find(s => s.id === toSectionId);
+  if (!fromSec || !toSec) return;
+
+  const fromIdx = fromSec.apps.findIndex(a => a.id === dragSrc.appId);
+  const [app] = fromSec.apps.splice(fromIdx, 1);
+
+  const toIdx = toSec.apps.findIndex(a => a.id === toAppId);
+  toSec.apps.splice(toIdx, 0, app);
+
+  saveData(); render();
+}
+
+// ── Keyboard: Esc closes modal ────────────────────────────────
+document.addEventListener("keydown", e => { if (e.key === "Escape") closeModal(); });
+
+// ── Init ──────────────────────────────────────────────────────
+render();
+</script>
+</body>
+</html>
